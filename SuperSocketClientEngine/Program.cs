@@ -16,17 +16,13 @@ namespace SuperSocketClientEngine
                 Console.WriteLine("未连接到服务器");
             }
             client.OnReveieveData += Client_OnReveieveData;
-            //   var message = CreateLoginMessage("werfwer", "ass地方房贷首付是", "123123123", ClientRole.Teacher);
-
             while (true)
             {
                 string str = Console.ReadLine();
                 var msg = CreateLoginMessage(str, "老师登录", DateTime.Now.ToLongTimeString(), ClientRole.Teacher);
                 client.SendMessage(msg);
             }
-            Console.ReadKey();
-
-
+           
         }
 
         private static void Client_OnReveieveData(ReceieveMessage message)
