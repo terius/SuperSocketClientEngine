@@ -6,13 +6,12 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace MySocket
 {
     public class MyClient
     {
-        readonly string terminator = "|||";
+     //   readonly string terminator = "|||";
         EasyClient client;
         public delegate void ReceiveHandle(ReceieveMessage message);
         public event ReceiveHandle OnReveieveData;
@@ -87,39 +86,27 @@ namespace MySocket
         public override ReceieveMessage ResolvePackage(IBufferStream bs)
         {
             ReceieveMessage message = new ReceieveMessage();
-            var data = bs.Buffers[0].Array;
-            int tempOffset = 0;
             var lenBytes = new byte[4];
-            Array.Copy(data, tempOffset, lenBytes, 0, 4);
-            message.Length =  BitConverter.ToInt32(lenBytes, 0);
-
-            tempOffset += 4;
+            bs.Read(lenBytes, 0, 4);
+            message.Length = BitConverter.ToInt32(lenBytes, 0);
             var timeBytes = new byte[14];
-            Array.Copy(data, tempOffset, timeBytes, 0, 14);
+            bs.Read(timeBytes, 0, 14);
             message.TimeStamp = Encoding.UTF8.GetString(timeBytes);
-
-            tempOffset += 14;
             var actionBytes = new byte[4];
-            Array.Copy(data, tempOffset, actionBytes, 0, 4);
+            bs.Read(actionBytes, 0, 4);
             message.Action = BitConverter.ToInt32(actionBytes, 0);
-
-            tempOffset += 4;
             var dataLength = message.Length - 18;
             var dataBytes = new byte[dataLength];
-            Array.Copy(data, tempOffset, dataBytes, 0, dataLength);
+            bs.Read(dataBytes, 0, dataLength);
             message.DataStr = Encoding.UTF8.GetString(dataBytes);
-            //  var msg = JsonHelper.DeserializeObj<ReceieveMessage>(message.DataStr);
             return message;
         }
 
 
         protected override int GetBodyLengthFromHeader(IBufferStream bufferStream, int length)
         {
-          
-            var data = bufferStream.Buffers[0].Array;
-            int tempOffset = 0;
             var lenBytes = new byte[length];
-            Array.Copy(data, tempOffset, lenBytes, 0, length);
+            bufferStream.Read(lenBytes, 0, length);
             return BitConverter.ToInt32(lenBytes, 0);
         }
     }
