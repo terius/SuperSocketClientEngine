@@ -16,6 +16,7 @@ namespace SuperSocketClientEngine
                 Console.WriteLine("未连接到服务器");
             }
             client.OnReveieveData += Client_OnReveieveData;
+            Console.WriteLine("请输入username");
             while (true)
             {
                 string str = Console.ReadLine();

@@ -20,19 +20,30 @@ namespace MySocket
         readonly int serverPort = Convert.ToInt32(System.Configuration.ConfigurationManager.AppSettings["serverPort"]);
         bool connected;
 
-        public bool Connected { get => connected; set => connected = value; }
+        public bool Connected
+        {
+            get
+            {
+                return connected;
+            }
+
+            set
+            {
+                connected = value;
+            }
+        }
 
         public MyClient()
         {
             client = new EasyClient();
-            client.Initialize(new MyReceiveFilter(terminator), (response) =>
+            client.Initialize(new MyReceiveFilter(), (response) =>
             {
                 OnReveieveData(response);
             });
 
-            connected = client.ConnectAsync(new IPEndPoint(IPAddress.Parse(serverIP), serverPort)).Result;
+            Connected = client.ConnectAsync(new IPEndPoint(IPAddress.Parse(serverIP), serverPort)).Result;
         }
-        
+
 
         public void SendMessage<T>(SendMessage<T> message) where T : class, new()
         {
@@ -50,7 +61,7 @@ namespace MySocket
 
         private byte[] CreateSendMessageByte<T>(SendMessage<T> message) where T : class, new()
         {
-            string jsonString = JsonHelper.SerializeObj(message.Data) + terminator;
+            string jsonString = JsonHelper.SerializeObj(message.Data);
             byte[] dataBytes = Encoding.UTF8.GetBytes(jsonString);
             string time = DateTime.Now.ToString("yyyyMMddHHmmss");
             byte[] timeBytes = Encoding.UTF8.GetBytes(time);
@@ -66,10 +77,10 @@ namespace MySocket
         }
     }
 
-    class MyReceiveFilter : TerminatorReceiveFilter<ReceieveMessage>
+    class MyReceiveFilter : FixedHeaderReceiveFilter<ReceieveMessage>
     {
-        public MyReceiveFilter(string ter)
-        : base(Encoding.UTF8.GetBytes(ter)) // two vertical bars as package terminator
+        public MyReceiveFilter()
+        : base(4) // two vertical bars as package terminator
         {
         }
 
@@ -80,7 +91,7 @@ namespace MySocket
             int tempOffset = 0;
             var lenBytes = new byte[4];
             Array.Copy(data, tempOffset, lenBytes, 0, 4);
-            message.Length = BitConverter.ToInt32(lenBytes, 0);
+            message.Length =  BitConverter.ToInt32(lenBytes, 0);
 
             tempOffset += 4;
             var timeBytes = new byte[14];
@@ -96,9 +107,20 @@ namespace MySocket
             var dataLength = message.Length - 18;
             var dataBytes = new byte[dataLength];
             Array.Copy(data, tempOffset, dataBytes, 0, dataLength);
-            message.DataStr = Encoding.UTF8.GetString(dataBytes).Trim('|');
+            message.DataStr = Encoding.UTF8.GetString(dataBytes);
             //  var msg = JsonHelper.DeserializeObj<ReceieveMessage>(message.DataStr);
             return message;
+        }
+
+
+        protected override int GetBodyLengthFromHeader(IBufferStream bufferStream, int length)
+        {
+          
+            var data = bufferStream.Buffers[0].Array;
+            int tempOffset = 0;
+            var lenBytes = new byte[length];
+            Array.Copy(data, tempOffset, lenBytes, 0, length);
+            return BitConverter.ToInt32(lenBytes, 0);
         }
     }
 
